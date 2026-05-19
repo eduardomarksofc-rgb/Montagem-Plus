@@ -39,6 +39,8 @@ export const HistoricoPage: React.FC = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
@@ -117,50 +119,40 @@ export const HistoricoPage: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="space-y-4">
-        <div className="relative group">
+      <div className="flex gap-2">
+        <div className="relative group flex-1">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all" size={20} />
           <input
-            placeholder="Buscar histórico por cliente, produto ou montador..."
-            className="w-full h-14 bg-white border border-slate-100 rounded-[24px] pl-14 pr-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-semibold text-sm shadow-sm"
+            placeholder="Buscar histórico..."
+            className="w-full h-14 bg-white border border-slate-100 rounded-[24px] pl-14 pr-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-semibold text-sm shadow-sm outline-none"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {/* Priority Filter */}
-          <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-100 shadow-sm">
-            <Filter size={14} className="text-slate-400" />
-            <select
-              className="flex-1 bg-transparent text-[10px] font-black text-slate-600 outline-none appearance-none uppercase tracking-widest"
-              value={priorityFilter}
-              onChange={e => setPriorityFilter(e.target.value)}
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
             >
-              <option value="todos">Todas Prioridades</option>
-              <option value="baixa">Baixa</option>
-              <option value="média">Média</option>
-              <option value="alta">Alta</option>
-              <option value="urgente">Urgente</option>
-            </select>
-          </div>
-
-          {user?.tipo === 'admin' && (
-            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-2xl border border-slate-100 shadow-sm transition-all overflow-hidden">
-              <Users size={14} className="text-blue-500" />
-              <select
-                className="flex-1 bg-transparent text-[10px] font-black text-slate-600 outline-none appearance-none uppercase tracking-widest truncate"
-                value={montadorFilter}
-                onChange={e => setMontadorFilter(e.target.value)}
-              >
-                <option value="todos">Todos Montadores</option>
-                {montadores.map(m => (
-                  <option key={m.id} value={m.id}>{m.nome}</option>
-                ))}
-              </select>
-            </div>
+              <X size={14} />
+            </button>
           )}
         </div>
+
+        <button 
+          onClick={() => setIsFilterSheetOpen(true)}
+          className={cn(
+            "w-14 h-14 bg-white border border-slate-100 rounded-[20px] flex items-center justify-center shadow-sm active:scale-95 transition-all relative",
+            (priorityFilter !== 'todos' || montadorFilter !== 'todos') && "border-blue-500/20 bg-blue-50/10"
+          )}
+        >
+          <Filter size={22} className={cn(
+            "transition-colors",
+            (priorityFilter !== 'todos' || montadorFilter !== 'todos') ? "text-blue-500" : "text-slate-400"
+          )} />
+          {(priorityFilter !== 'todos' || montadorFilter !== 'todos') && (
+            <span className="absolute top-3.5 right-3.5 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" />
+          )}
+        </button>
       </div>
 
       {/* List */}
@@ -392,6 +384,95 @@ export const HistoricoPage: React.FC = () => {
         onClose={() => setIsEditOpen(false)}
         initialData={selectedAssembly}
       />
+
+      {/* Advanced Filters Bottom Sheet */}
+      <AnimatePresence>
+        {isFilterSheetOpen && (
+          <div className="fixed inset-0 z-[300] flex items-end justify-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFilterSheetOpen(false)}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-md bg-white rounded-t-[40px] shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto my-4 shrink-0" />
+              
+              <div className="px-8 pb-12 overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Filtros</h3>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">Refinar Histórico</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsFilterSheetOpen(false)} 
+                    className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Priority */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prioridade</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['todos', 'baixa', 'média', 'alta', 'urgente'].map(p => (
+                        <button
+                          key={p}
+                          onClick={() => setPriorityFilter(p)}
+                          className={cn(
+                            "px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                            priorityFilter === p ? "bg-slate-900 border-slate-900 text-white shadow-lg" : "bg-white border-slate-100 text-slate-500"
+                          )}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Montadores */}
+                  {user?.tipo === 'admin' && (
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Montador</label>
+                      <div className="relative">
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                        <select
+                          className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl pl-12 pr-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm outline-none appearance-none"
+                          value={montadorFilter}
+                          onChange={e => setMontadorFilter(e.target.value)}
+                        >
+                          <option value="todos">Todos Montadores</option>
+                          {montadores.map(m => (
+                            <option key={m.id} value={m.id}>{m.nome}</option>
+                          ))}
+                        </select>
+                        <ArrowUpDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                      </div>
+                    </div>
+                  )}
+
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setIsFilterSheetOpen(false)}
+                    className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-slate-900/10 mt-2"
+                  >
+                    Ver Resultados
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

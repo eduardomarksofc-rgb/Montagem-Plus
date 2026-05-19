@@ -218,80 +218,41 @@ export const AgendaPage: React.FC = () => {
         )}
       </div>
 
-      {/* Filters & Search */}
-      <div className="space-y-4">
-        {/* Compact Search */}
-        <div className="relative group">
+      {/* Search & Filters */}
+      <div className="flex gap-2">
+        <div className="relative group flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all" size={18} />
           <input
             placeholder="Cliente ou produto..."
-            className="w-full h-11 bg-white border border-slate-100 rounded-2xl pl-11 pr-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm shadow-sm outline-none"
+            className="w-full h-12 bg-white border border-slate-100 rounded-[22px] pl-11 pr-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm shadow-sm outline-none"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
           {search && (
             <button 
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
             >
-              <X size={12} />
+              <X size={14} />
             </button>
           )}
         </div>
 
-        {/* Primary Row: Time Filters */}
-        <div className="flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
-          <div className="flex gap-1.5 p-1 bg-white border border-slate-100 rounded-2xl w-fit shrink-0">
-            {[
-              { id: 'todos', label: 'Todos' },
-              { id: 'hoje', label: 'Hoje' },
-              { id: 'amanha', label: 'Amanhã' },
-              { id: 'semana', label: 'Semana' }
-            ].map(t => (
-              <button
-                key={t.id}
-                onClick={() => setTimeFilter(t.id as any)}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
-                  timeFilter === t.id ? "bg-slate-900 text-white shadow-md shadow-slate-900/10" : "text-slate-400 hover:text-slate-600"
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
-          <button 
-            onClick={() => setIsFilterSheetOpen(true)}
-            className="h-10 px-4 bg-white border border-slate-100 rounded-2xl flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-500 shadow-sm active:scale-95 transition-all"
-          >
-            <Filter size={14} className="text-blue-500" />
-            Filtros
-          </button>
-        </div>
-
-        {/* Secondary Row: Status Filters (Simplified) */}
-        <div className="flex gap-2 overflow-x-auto pb-0.5 no-scrollbar">
-          {[
-            { id: 'todos', label: 'Todos Status' },
-            { id: 'em andamento', label: 'Em Andamento' },
-            { id: 'pendência', label: 'Pendências' },
-            { id: 'agendada', label: 'Agendadas' }
-          ].map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setStatusFilter(s.id)}
-              className={cn(
-                "px-4 h-9 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap shrink-0 border",
-                statusFilter === s.id 
-                  ? "bg-blue-50 border-blue-100 text-blue-600" 
-                  : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+        <button 
+          onClick={() => setIsFilterSheetOpen(true)}
+          className={cn(
+            "w-12 h-12 bg-white border border-slate-100 rounded-[18px] flex items-center justify-center shadow-sm active:scale-95 transition-all relative",
+            (statusFilter !== 'todos' || montadorFilter !== 'todos' || timeFilter !== 'todos' || priorityFilter !== 'todos') && "border-blue-500/20 bg-blue-50/10"
+          )}
+        >
+          <Filter size={20} className={cn(
+            "transition-colors",
+            (statusFilter !== 'todos' || montadorFilter !== 'todos' || timeFilter !== 'todos' || priorityFilter !== 'todos') ? "text-blue-500" : "text-slate-400"
+          )} />
+          {(statusFilter !== 'todos' || montadorFilter !== 'todos' || timeFilter !== 'todos' || priorityFilter !== 'todos') && (
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-500 rounded-full border-2 border-white" />
+          )}
+        </button>
       </div>
 
       {/* Content */}
@@ -535,6 +496,55 @@ export const AgendaPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-6">
+                  {/* Tempo */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Período</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'todos', label: 'Todos' },
+                        { id: 'hoje', label: 'Hoje' },
+                        { id: 'amanha', label: 'Amanhã' },
+                        { id: 'semana', label: 'Esta Semana' }
+                      ].map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setTimeFilter(t.id as any)}
+                          className={cn(
+                            "px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                            timeFilter === t.id ? "bg-slate-900 border-slate-900 text-white shadow-lg" : "bg-white border-slate-100 text-slate-500"
+                          )}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'todos', label: 'Todos' },
+                        { id: 'em andamento', label: 'Em Andamento' },
+                        { id: 'agendada', label: 'Agendadas' },
+                        { id: 'pendência', label: 'Pendências' },
+                        { id: 'concluída', label: 'Concluídas' }
+                      ].map(s => (
+                        <button
+                          key={s.id}
+                          onClick={() => setStatusFilter(s.id)}
+                          className={cn(
+                            "px-4 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                            statusFilter === s.id ? "bg-slate-900 border-slate-900 text-white shadow-lg" : "bg-white border-slate-100 text-slate-500"
+                          )}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Priority */}
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prioridade</label>
