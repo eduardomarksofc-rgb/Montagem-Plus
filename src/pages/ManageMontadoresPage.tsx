@@ -111,8 +111,13 @@ export const ManageMontadoresPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Deseja excluir este acesso? O montador não poderá mais entrar no sistema.')) {
-      await deleteDocument('usuarios', id);
+    if (window.confirm('Deseja excluir este acesso? O montador não poderá mais entrar no sistema.')) {
+      try {
+        await deleteDocument('usuarios', id);
+      } catch (error) {
+        console.error('Erro ao excluir:', error);
+        alert('Erro ao excluir montador.');
+      }
     }
   };
 
@@ -177,7 +182,10 @@ export const ManageMontadoresPage: React.FC = () => {
                   <Edit2 size={18} />
                 </button>
                 <button 
-                  onClick={() => handleDelete(m.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(m.id);
+                  }}
                   className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                 >
                   <Trash2 size={18} />

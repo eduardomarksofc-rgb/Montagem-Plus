@@ -213,7 +213,12 @@ export const MontadorDashboard: React.FC = () => {
                       (a.produto?.toLowerCase() || '').includes(debouncedSearch.toLowerCase()) ||
                       (a.endereco?.toLowerCase() || '').includes(debouncedSearch.toLowerCase());
     return matchSearch;
-  }).sort((a, b) => a.data.localeCompare(b.data));
+  }).sort((a, b) => {
+    // Prioridade absoluta para status "em andamento"
+    if (a.status === 'em andamento' && b.status !== 'em andamento') return -1;
+    if (a.status !== 'em andamento' && b.status === 'em andamento') return 1;
+    return a.data.localeCompare(b.data) || (a.horario?.localeCompare(b.horario) || 0);
+  });
 
   const stats = {
     today: filteredAssemblies.filter(a => a.data === new Date().toISOString().split('T')[0]).length,
@@ -295,7 +300,7 @@ export const MontadorDashboard: React.FC = () => {
                 {/* Status Bar */}
                 <div className={`h-1.5 w-full ${
                   assembly.status === 'concluída' ? 'bg-emerald-500' :
-                  assembly.status === 'em andamento' ? 'bg-blue-500' :
+                  assembly.status === 'em andamento' ? 'bg-blue-500 animate-pulse' :
                   assembly.status === 'pendência' ? 'bg-amber-500' : 
                   assembly.status === 'reagendada' ? 'bg-amber-400' : 'bg-slate-200'
                 }`} />

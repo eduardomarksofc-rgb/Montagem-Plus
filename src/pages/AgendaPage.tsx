@@ -22,7 +22,7 @@ import {
   X,
   Calendar
 } from 'lucide-react';
-import { subscribeToCollection, deleteDocument, updateDocument, sendNotification } from '@/src/firebase/firestore';
+import { subscribeToCollection, deleteDocument, updateDocument, sendNotification, logActivity } from '@/src/firebase/firestore';
 import { StatusBadge, type AssemblyStatus } from '@/src/components/StatusBadge';
 import { AssemblyForm } from '@/src/components/AssemblyForm';
 import { RescheduleModal } from '@/src/components/RescheduleModal';
@@ -101,6 +101,10 @@ export const AgendaPage: React.FC = () => {
 
       return matchSearch && matchStatus && matchMontador && matchTime && matchPriority;
     }).sort((a, b) => {
+      // Prioridade absoluta para status "em andamento"
+      if (a.status === 'em andamento' && b.status !== 'em andamento') return -1;
+      if (a.status !== 'em andamento' && b.status === 'em andamento') return 1;
+
       if (sortBy === 'prioridade') {
         const priorityScore: any = { 'urgente': 4, 'alta': 3, 'média': 2, 'baixa': 1 };
         return priorityScore[b.prioridade] - priorityScore[a.prioridade];
@@ -113,6 +117,7 @@ export const AgendaPage: React.FC = () => {
 
   const groupedAssemblies = useMemo(() => {
     const groups: { [key: string]: any[] } = {
+      'Em Andamento': [],
       'Hoje': [],
       'Amanhã': [],
       'Próximos': []
@@ -123,6 +128,12 @@ export const AgendaPage: React.FC = () => {
     const tomorrow = today + (24 * 60 * 60 * 1000);
 
     filteredAssemblies.forEach(a => {
+      // Prioridade máxima para montagens iniciadas
+      if (a.status === 'em andamento') {
+        groups['Em Andamento'].push(a);
+        return;
+      }
+
       const assemblyDate = new Date(a.data + 'T00:00:00').getTime();
       if (assemblyDate === today) {
         groups['Hoje'].push(a);
@@ -137,9 +148,24 @@ export const AgendaPage: React.FC = () => {
   }, [filteredAssemblies]);
 
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta montagem?')) {
-      await deleteDocument('montagens', id);
+    if (window.confirm('Tem certeza que deseja excluir esta montagem?')) {
+      const assembly = assemblies.find(a => a.id === id);
       setActionMenuId(null);
+      try {
+        await deleteDocument('montagens', id);
+        if (assembly) {
+          await logActivity(
+            id,
+            user?.id || '',
+            user?.nome || 'Admin',
+            'Exclusão',
+            `Montagem de ${assembly.cliente} excluída`
+          );
+        }
+      } catch (error) {
+        console.error('Erro ao excluir:', error);
+        alert('Ocorreu um erro ao excluir a montagem. Verifique sua conexão.');
+      }
     }
   };
 
@@ -298,13 +324,16 @@ export const AgendaPage: React.FC = () => {
                   <motion.div
                     layout
                     key={assembly.id}
-                    className="bg-white rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md"
+                    className={cn(
+                      "bg-white rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md relative",
+                      actionMenuId === assembly.id ? "z-[150]" : "z-0"
+                    )}
                   >
                     <div className={cn(
                       "h-1.5 w-full rounded-t-[28px]",
                       assembly.status === 'concluída' ? 'bg-emerald-500' : 
                       assembly.status === 'pendência' ? 'bg-red-500' : 
-                      assembly.status === 'em andamento' ? 'bg-blue-500' : 'bg-slate-200'
+                      assembly.status === 'em andamento' ? 'bg-blue-500 animate-pulse' : 'bg-slate-200'
                     )} />
 
                     <div className="p-4 space-y-3">
@@ -348,50 +377,61 @@ export const AgendaPage: React.FC = () => {
                           <AnimatePresence>
                             {actionMenuId === assembly.id && (
                               <>
-                                <div className="fixed inset-0 z-[140]" onClick={() => setActionMenuId(null)} />
+                                <div 
+                                  className="fixed inset-0 z-[140] bg-slate-900/5 backdrop-blur-[2px]" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActionMenuId(null);
+                                  }} 
+                                />
                                 <motion.div
-                                  initial={{ opacity: 0, scale: 0.8, originX: 0.9, originY: 0 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.8 }}
-                                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                  className="absolute right-0 top-11 w-44 bg-white/80 backdrop-blur-2xl rounded-[22px] shadow-[0_15px_40px_rgba(0,0,0,0.15)] border border-white p-1 z-[150] ring-1 ring-slate-900/5 overflow-hidden"
+                                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                  transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                                  className="absolute right-0 top-12 w-52 bg-white rounded-[32px] shadow-[0_25px_60px_rgba(0,0,0,0.25)] border border-slate-100 p-2 z-[150] overflow-hidden"
                                 >
-                                  <div className="p-1 space-y-0.5">
+                                  <div className="space-y-1">
                                     <button 
-                                      onClick={() => handleEdit(assembly)} 
-                                      className="w-full flex items-center justify-between h-10 px-3 hover:bg-slate-900/5 rounded-xl transition-all text-slate-700 active:scale-[0.98]"
+                                      onClick={(e) => { e.stopPropagation(); handleEdit(assembly); }} 
+                                      className="w-full flex items-center justify-between h-12 px-4 hover:bg-slate-50 rounded-2xl transition-all text-slate-700 active:scale-[0.98]"
                                     >
-                                      <span className="font-bold text-[10px] uppercase tracking-widest">Editar</span>
-                                      <Edit2 size={12} className="text-blue-500" />
+                                      <span className="font-bold text-[11px] uppercase tracking-widest">Editar</span>
+                                      <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                                        <Edit2 size={14} />
+                                      </div>
                                     </button>
                                     
                                     <button 
-                                      onClick={() => {
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         setSelectedAssembly(assembly);
                                         setIsRescheduleOpen(true);
                                         setActionMenuId(null);
                                       }} 
-                                      className="w-full flex items-center justify-between h-10 px-3 hover:bg-slate-900/5 rounded-xl transition-all text-slate-700 active:scale-[0.98]"
+                                      className="w-full flex items-center justify-between h-12 px-4 hover:bg-slate-50 rounded-2xl transition-all text-slate-700 active:scale-[0.98]"
                                     >
-                                      <span className="font-bold text-[10px] uppercase tracking-widest">Reagendar</span>
-                                      <Calendar size={12} className="text-amber-500" />
+                                      <span className="font-bold text-[11px] uppercase tracking-widest">Reagendar</span>
+                                      <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
+                                        <Calendar size={14} />
+                                      </div>
                                     </button>
                                   </div>
 
-                                  <div className="h-px bg-slate-100/50 mx-2" />
+                                  <div className="h-px bg-slate-100/50 my-2 mx-2" />
                                   
-                                  <div className="p-1.5 pt-2">
-                                    <p className="text-[8px] uppercase font-black text-slate-300 ml-2 mb-1.5 tracking-[0.1em]">Status</p>
-                                    <div className="grid grid-cols-2 gap-1">
+                                  <div className="px-3 py-2">
+                                    <p className="text-[9px] uppercase font-black text-slate-400 mb-3 ml-1 tracking-widest">Alterar Status</p>
+                                    <div className="grid grid-cols-2 gap-2">
                                       {(['agendada', 'concluída', 'pendência', 'reagendada'] as AssemblyStatus[]).map(s => (
                                         <button 
                                           key={s}
-                                          onClick={() => updateStatus(assembly.id, s)}
+                                          onClick={(e) => { e.stopPropagation(); updateStatus(assembly.id, s); }}
                                           className={cn(
-                                            "h-8 flex items-center justify-center rounded-lg text-[7px] font-black uppercase tracking-tight transition-all",
+                                            "h-9 flex items-center justify-center rounded-xl text-[8px] font-black uppercase tracking-tight transition-all border",
                                             assembly.status === s 
-                                              ? "bg-slate-900 text-white shadow-sm" 
-                                              : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                                              ? "bg-slate-900 border-slate-900 text-white shadow-lg" 
+                                              : "bg-white border-slate-100 text-slate-500 hover:border-slate-200"
                                           )}
                                         >
                                           {s}
@@ -402,16 +442,19 @@ export const AgendaPage: React.FC = () => {
 
                                   {user?.tipo === 'admin' && (
                                     <>
-                                      <div className="h-px bg-slate-100/50 mx-2" />
-                                      <div className="p-1">
-                                        <button 
-                                          onClick={() => handleDelete(assembly.id)} 
-                                          className="w-full flex items-center justify-between h-9 px-3 hover:bg-red-50 text-red-500 rounded-xl transition-all active:scale-[0.98]"
-                                        >
-                                          <span className="font-bold text-[9px] uppercase tracking-widest">Excluir</span>
-                                          <Trash2 size={12} className="opacity-50" />
-                                        </button>
-                                      </div>
+                                      <div className="h-px bg-slate-100/50 my-2 mx-2" />
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDelete(assembly.id);
+                                        }} 
+                                        className="w-full flex items-center justify-between h-14 px-4 hover:bg-red-50 text-red-500 rounded-[22px] transition-all active:scale-[0.98] group"
+                                      >
+                                        <span className="font-bold text-[11px] uppercase tracking-widest">Excluir</span>
+                                        <div className="w-9 h-9 rounded-xl bg-red-100/50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                                          <Trash2 size={16} />
+                                        </div>
+                                      </button>
                                     </>
                                   )}
                                 </motion.div>
