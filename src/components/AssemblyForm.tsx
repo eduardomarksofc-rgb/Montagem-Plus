@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Save, MapPin, Package, Calendar as CalendarIcon, Clock, MessageSquare, User, Loader2, UserCheck } from 'lucide-react';
-import { createDocument, updateDocument, subscribeToCollection, sendNotification } from '@/src/firebase/firestore';
+import { X, Save, MapPin, Package, Calendar as CalendarIcon, Clock, MessageSquare, User, Loader2, UserCheck, CheckCircle2 } from 'lucide-react';
+import { createDocument, updateDocument, subscribeToCollection, sendNotification, logActivity } from '@/src/firebase/firestore';
 import { serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { cn } from '@/src/lib/utils';
 
 interface AssemblyFormProps {
   isOpen: boolean;
@@ -29,8 +30,13 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
     responsavelNome: ''
   });
 
+  const [loading, setLoading] = useState(false);
+  const [montadores, setMontadores] = useState<any[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
+      setShowSuccess(false);
       if (initialData) {
         setFormData({
           cliente: initialData.cliente || '',
@@ -62,8 +68,6 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
       }
     }
   }, [isOpen, initialData]);
-  const [loading, setLoading] = useState(false);
-  const [montadores, setMontadores] = useState<any[]>([]);
 
   useEffect(() => {
     const unsub = subscribeToCollection('usuarios', (data) => {
@@ -74,18 +78,35 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    
     setLoading(true);
     try {
       const selectedMontador = montadores.find(m => m.id === formData.responsavelId);
       const data = {
-        ...formData,
-        responsavelNome: selectedMontador?.nome || '',
+        cliente: formData.cliente,
+        endereco: formData.endereco,
+        produto: formData.produto,
+        data: formData.data,
+        horario: formData.horario,
+        duracao: formData.duracao,
+        prioridade: formData.prioridade,
+        observacao: formData.observacao,
+        status: formData.status,
+        responsavelId: formData.responsavelId,
+        responsavelNome: selectedMontador?.nome || formData.responsavelNome || '',
         atualizadoEm: serverTimestamp(),
-        ...(initialData ? {} : { criadoEm: serverTimestamp() })
       };
 
       if (initialData?.id) {
         await updateDocument('montagens', initialData.id, data);
+        await logActivity(
+          initialData.id,
+          user?.id || '',
+          user?.nome || 'Admin',
+          'Edição',
+          `Alteração nos dados da montagem de ${formData.cliente}`
+        );
         if (formData.responsavelId) {
           await sendNotification(
             formData.responsavelId,
@@ -95,7 +116,20 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
           );
         }
       } else {
-        const newId = await createDocument('montagens', data);
+        const createData = {
+          ...data,
+          criadoEm: serverTimestamp()
+        };
+        const newId = await createDocument('montagens', createData);
+        if (newId) {
+          await logActivity(
+            newId,
+            user?.id || '',
+            user?.nome || 'Admin',
+            'Criação',
+            `Agendamento criado para o cliente ${formData.cliente}`
+          );
+        }
         if (formData.responsavelId) {
           await sendNotification(
             formData.responsavelId,
@@ -105,10 +139,14 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
           );
         }
       }
-      onClose();
+      
+      setShowSuccess(true);
+      setTimeout(() => {
+        onClose();
+        setLoading(false);
+      }, 1500);
     } catch (error) {
-      console.error(error);
-    } finally {
+      console.error('Error saving assembly:', error);
       setLoading(false);
     }
   };
@@ -152,7 +190,7 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
               </motion.button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-8 space-y-5 pb-32">
+            <form id="assembly-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-8 space-y-5 pb-12">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
                 <div className="relative group">
@@ -314,22 +352,32 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
                   </div>
                 </div>
               </div>
-            </form>
 
-            <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-white via-white to-transparent pt-12 pointer-events-none">
               {!isReadOnly && (
-                <div className="pointer-events-auto">
+                <div className="pt-2">
                   <motion.button
+                    type="submit"
                     whileTap={{ scale: 0.96 }}
-                    disabled={loading}
-                    className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl shadow-slate-900/10 active:scale-95 transition-all disabled:opacity-50"
+                    disabled={loading || showSuccess}
+                    className={cn(
+                      "w-full h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl transition-all disabled:opacity-50",
+                      showSuccess ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-slate-900 text-white shadow-slate-900/10"
+                    )}
                   >
-                    {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={18} />}
-                    {initialData ? 'Confirmar Alterações' : 'Criar Agendamento'}
+                    {loading ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : showSuccess ? (
+                      <CheckCircle2 size={20} />
+                    ) : (
+                      <Save size={18} />
+                    )}
+                    {showSuccess ? 'Sucesso!' : (initialData ? 'Confirmar Alterações' : 'Criar Agendamento')}
                   </motion.button>
                 </div>
               )}
-            </div>
+            </form>
+
+            <div className="mt-auto" />
           </motion.div>
         </>
       )}

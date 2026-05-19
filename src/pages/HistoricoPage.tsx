@@ -23,6 +23,7 @@ import { subscribeToCollection } from '@/src/firebase/firestore';
 import { useAuth } from '@/src/context/AuthContext';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { cn } from '@/src/lib/utils';
+import { AssemblyForm } from '@/src/components/AssemblyForm';
 
 export const HistoricoPage: React.FC = () => {
   const { user } = useAuth();
@@ -36,6 +37,7 @@ export const HistoricoPage: React.FC = () => {
   const [montadorFilter, setMontadorFilter] = useState<string>('todos');
   const [selectedAssembly, setSelectedAssembly] = useState<any>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -365,21 +367,31 @@ export const HistoricoPage: React.FC = () => {
               </div>
 
               {/* Action for Admin - Resolving or editing */}
-              {user?.tipo === 'admin' && selectedAssembly.status !== 'concluída' && (
-                <div className="p-8 bg-white border-t border-slate-50">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => { setIsDetailsOpen(false); /* Logic to edit if needed */ }}
-                    className="w-full h-16 bg-blue-500 text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 flex items-center justify-center gap-2"
-                  >
-                    Editar Montagem
-                  </motion.button>
-                </div>
-              )}
+               {user?.tipo === 'admin' && (
+                 <div className="p-8 bg-white border-t border-slate-50">
+                   <motion.button
+                     whileTap={{ scale: 0.98 }}
+                     onClick={() => { 
+                       setIsDetailsOpen(false); 
+                       // Wait for details to close to avoid z-index/backdrop issues
+                       setTimeout(() => setIsEditOpen(true), 100);
+                     }}
+                     className="w-full h-16 bg-blue-500 text-white rounded-[24px] font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 flex items-center justify-center gap-2"
+                   >
+                     Editar Montagem
+                   </motion.button>
+                 </div>
+               )}
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
+      <AssemblyForm 
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        initialData={selectedAssembly}
+      />
     </div>
   );
 };

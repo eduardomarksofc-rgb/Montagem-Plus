@@ -361,7 +361,7 @@ export const AgendaPage: React.FC = () => {
                                       onClick={() => handleEdit(assembly)} 
                                       className="w-full flex items-center justify-between h-10 px-3 hover:bg-slate-900/5 rounded-xl transition-all text-slate-700 active:scale-[0.98]"
                                     >
-                                      <span className="font-bold text-[10px] uppercase tracking-widest">Detalhes</span>
+                                      <span className="font-bold text-[10px] uppercase tracking-widest">Editar</span>
                                       <Edit2 size={12} className="text-blue-500" />
                                     </button>
                                     
