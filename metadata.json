@@ -1,0 +1,6 @@
+{
+  "name": "Montagem+",
+  "description": "Sistema profissional de controle de montagens com interface premium iOS.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

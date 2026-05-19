@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --radius-ios: 20px;
+  --radius-ios-sm: 12px;
+  
+  --color-ios-blue: #007AFF;
+  --color-ios-gray: #8E8E93;
+  --color-ios-bg: #F2F2F7;
+  --color-ios-surface: rgba(255, 255, 255, 0.7);
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-ios-bg)] text-black font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.glass {
+  @apply backdrop-blur-xl bg-white/70 border border-white/20;
+}
+
+.glass-dark {
+  @apply backdrop-blur-xl bg-black/40 border border-white/10;
+}
+
+/* iOS Bottom Nav Blur */
+.ios-nav {
+  @apply fixed bottom-0 left-0 right-0 h-20 backdrop-blur-2xl bg-white/80 border-t border-black/5;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+input:focus {
+  @apply outline-none;
+}

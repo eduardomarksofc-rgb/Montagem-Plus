@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "User": {
+      "title": "Usuário",
+      "description": "Dados do usuário do sistema",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string", "description": "Nome completo" },
+        "usuario": { "type": "string", "description": "Login do usuário" },
+        "senha": { "type": "string", "description": "Senha (texto plano para este MVP conforme pedido)" },
+        "tipo": { "type": "string", "enum": ["admin", "usuario"], "description": "Nível de acesso" },
+        "cidade": { "type": "string", "description": "Cidade de atuação" },
+        "ativo": { "type": "boolean", "description": "Status da conta" }
+      },
+      "required": ["nome", "usuario", "senha", "tipo", "cidade", "ativo"]
+    },
+    "Assembly": {
+      "title": "Montagem",
+      "description": "Dados da montagem agendada",
+      "type": "object",
+      "properties": {
+        "cliente": { "type": "string" },
+        "endereco": { "type": "string" },
+        "produto": { "type": "string" },
+        "data": { "type": "string" },
+        "horario": { "type": "string" },
+        "status": { "type": "string" },
+        "responsavelId": { "type": "string" },
+        "responsavelNome": { "type": "string" }
+      },
+      "required": ["cliente", "data", "status"]
+    },
+    "Montador": {
+      "title": "Montador",
+      "description": "Dados do montador",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "ativo": { "type": "boolean" },
+        "criadoEm": { "type": "string" }
+      },
+      "required": ["nome", "ativo"]
+    },
+    "LogAlteracao": {
+      "title": "Log de Alteração",
+      "description": "Log de mudanças nas montagens",
+      "type": "object",
+      "properties": {
+        "montagemId": { "type": "string" },
+        "usuarioId": { "type": "string" },
+        "usuarioNome": { "type": "string" },
+        "tipoAlteracao": { "type": "string" },
+        "descricao": { "type": "string" },
+        "dataAlteracao": { "type": "object" }
+      },
+      "required": ["montagemId", "usuarioId", "tipoAlteracao"]
+    },
+    "Notification": {
+      "title": "Notificação",
+      "description": "Notificações do sistema",
+      "type": "object",
+      "properties": {
+        "titulo": { "type": "string" },
+        "mensagem": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["info", "alerta", "urgente"] },
+        "usuarioId": { "type": "string" },
+        "lida": { "type": "boolean" },
+        "criadoEm": { "type": "object" }
+      },
+      "required": ["titulo", "mensagem", "usuarioId", "lida"]
+    }
+  },
+  "firestore": {
+    "/usuarios/{userId}": {
+      "schema": "User",
+      "description": "Coleção de usuários do sistema"
+    },
+    "/montagens/{assemblyId}": {
+      "schema": "Assembly",
+      "description": "Coleção de montagens"
+    },
+    "/historicoAlteracoes/{logId}": {
+      "schema": "LogAlteracao",
+      "description": "Log de auditoria do sistema"
+    },
+    "/notificacoes/{notifId}": {
+      "schema": "Notification",
+      "description": "Notificações dos usuários"
+    }
+  }
+}
