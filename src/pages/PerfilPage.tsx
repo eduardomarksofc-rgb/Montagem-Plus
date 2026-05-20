@@ -12,7 +12,7 @@ export const PerfilPage: React.FC = () => {
     {
       title: 'Minha Conta',
       items: [
-        { icon: User, label: 'Dados Pessoais', color: 'bg-blue-50 text-blue-500', value: user?.email },
+        { icon: User, label: 'Dados Pessoais', color: 'bg-blue-50 text-blue-500', value: user?.usuario ? `@${user.usuario}` : undefined },
         { icon: ShieldCheck, label: 'Segurança & Biometria', color: 'bg-emerald-50 text-emerald-500' },
         { icon: Bell, label: 'Notificações Push', color: 'bg-amber-50 text-amber-500' },
       ]
