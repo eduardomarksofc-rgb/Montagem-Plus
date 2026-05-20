@@ -8,6 +8,7 @@ import { AssemblyForm } from '@/src/components/AssemblyForm';
 import { GlobalSearch } from '@/src/components/GlobalSearch';
 import { useNavigate } from 'react-router-dom';
 import { MontadorDashboard } from './MontadorDashboard';
+import { VendasDashboard } from './VendasDashboard';
 import { NotificationCenter } from '@/src/components/NotificationCenter';
 import { isToday, parseISO } from 'date-fns';
 
@@ -36,6 +37,10 @@ export const Dashboard: React.FC = () => {
 
   if (user?.tipo === 'montador') {
     return <MontadorDashboard />;
+  }
+
+  if (user?.tipo === 'vendas') {
+    return <VendasDashboard />;
   }
 
   const completedCount = assemblies.filter(a => a.status === 'concluída').length;

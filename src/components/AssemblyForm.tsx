@@ -21,6 +21,7 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
     endereco: '',
     produto: '',
     data: '',
+    dataEntrega: '',
     horario: '',
     duracao: '01:00',
     prioridade: 'média',
@@ -43,6 +44,7 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
           endereco: initialData.endereco || '',
           produto: initialData.produto || '',
           data: initialData.data || '',
+          dataEntrega: initialData.dataEntrega || '',
           horario: initialData.horario || '',
           duracao: initialData.duracao || '01:00',
           prioridade: initialData.prioridade || 'média',
@@ -57,6 +59,7 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
           endereco: '',
           produto: '',
           data: '',
+          dataEntrega: '',
           horario: '',
           duracao: '01:00',
           prioridade: 'média',
@@ -76,6 +79,71 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
     return () => unsub?.();
   }, []);
 
+  const handleDeliveryDateChange = (deliveryDate: string) => {
+    setFormData(prev => {
+      const updated = { ...prev, dataEntrega: deliveryDate };
+      if (deliveryDate && !prev.data) {
+        updated.data = deliveryDate;
+      }
+      return updated;
+    });
+  };
+
+  const getSuggestedDates = (deliveryDateStr: string) => {
+    if (!deliveryDateStr) return [];
+    try {
+      const dates = [];
+      const parts = deliveryDateStr.split('-');
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      
+      const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+      for (let i = 0; i <= 3; i++) {
+        const d = new Date(year, month, day);
+        d.setDate(d.getDate() + i);
+        
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const isoString = `${yyyy}-${mm}-${dd}`;
+        
+        const label = i === 0 ? 'Mesmo Dia' : `+${i} Dia${i > 1 ? 's' : ''}`;
+        const weekday = weekdays[d.getDay()];
+        const formattedDate = `${dd}/${mm}`;
+
+        dates.push({
+          iso: isoString,
+          formatted: formattedDate,
+          weekday,
+          label
+        });
+      }
+      return dates;
+    } catch {
+      return [];
+    }
+  };
+
+  const getDaysDifference = (del: string, ass: string) => {
+    if (!del || !ass) return { isValid: true, diff: 0 };
+    try {
+      const d1 = new Date(del + 'T00:00:00');
+      const d2 = new Date(ass + 'T00:00:00');
+      const timeDiff = d2.getTime() - d1.getTime();
+      const diffDays = Math.round(timeDiff / (1000 * 3600 * 24));
+      return {
+        isValid: diffDays >= 0 && diffDays <= 3,
+        diff: diffDays
+      };
+    } catch {
+      return { isValid: true, diff: 0 };
+    }
+  };
+
+  const validation = getDaysDifference(formData.dataEntrega, formData.data);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
@@ -88,6 +156,7 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
         endereco: formData.endereco,
         produto: formData.produto,
         data: formData.data,
+        dataEntrega: formData.dataEntrega,
         horario: formData.horario,
         duracao: formData.duracao,
         prioridade: formData.prioridade,
@@ -257,39 +326,139 @@ export const AssemblyForm: React.FC<AssemblyFormProps> = ({ isOpen, onClose, ini
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              {/* Seção de Agendamento e Entrega */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Data de Entrega */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data</label>
-                  <input
-                    type="date"
-                    required
-                    disabled={isReadOnly}
-                    className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-[10px] outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                    value={formData.data}
-                    onChange={e => setFormData({ ...formData, data: e.target.value })}
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data da Entrega</label>
+                    <span className="text-[8px] font-black text-blue-500 uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded-md">Previsão</span>
+                  </div>
+                  <div className="relative group">
+                    <input
+                      type="date"
+                      disabled={isReadOnly}
+                      className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                      value={formData.dataEntrega}
+                      onChange={e => handleDeliveryDateChange(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Data da Montagem */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data da Montagem</label>
+                  <div className="relative group">
+                    <input
+                      type="date"
+                      required
+                      disabled={isReadOnly}
+                      className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                      value={formData.data}
+                      onChange={e => setFormData({ ...formData, data: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* iOS Style Suggestions Capsule Container */}
+              <AnimatePresence>
+                {formData.dataEntrega && !isReadOnly && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2 overflow-hidden"
+                  >
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Sugestões de Montagem (Janela de 3 Dias)</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar pt-0.5">
+                      {getSuggestedDates(formData.dataEntrega).map((sug) => {
+                        const isSelected = formData.data === sug.iso;
+                        return (
+                          <motion.button
+                            key={sug.iso}
+                            type="button"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setFormData(prev => ({ ...prev, data: sug.iso }))}
+                            className={cn(
+                              "px-3.5 py-2.5 rounded-2xl flex flex-col items-center justify-center shrink-0 border min-w-[76px] transition-all",
+                              isSelected 
+                                ? "bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/15" 
+                                : "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100"
+                            )}
+                          >
+                            <span className="text-[8px] font-black uppercase tracking-wider leading-none mb-1 opacity-70">{sug.weekday}</span>
+                            <span className="text-xs font-black leading-none mb-1">{sug.formatted}</span>
+                            <span className={cn(
+                              "text-[7px] font-black uppercase tracking-tight px-1 py-0.5 rounded-md leading-none",
+                              isSelected ? "bg-white/10 text-white" : "bg-slate-200/50 text-slate-500"
+                            )}>
+                              {sug.label}
+                            </span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Validation Warning Alert */}
+              <AnimatePresence>
+                {formData.dataEntrega && formData.data && !validation.isValid && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={cn(
+                      "p-3.5 rounded-2xl flex items-start gap-3 text-xs font-semibold leading-relaxed border transition-all shadow-sm",
+                      validation.diff < 0 
+                        ? "bg-amber-50 border-amber-100 text-amber-700" 
+                        : "bg-red-50 border-red-100 text-red-700"
+                    )}
+                  >
+                    <span className="text-base leading-none">⚠️</span>
+                    <div>
+                      <p className="font-extrabold text-[9px] uppercase tracking-wider">Atenção no Prazo de Montagem</p>
+                      <p className="mt-0.5 text-[11px] font-bold">
+                        {validation.diff < 0 
+                          ? "A data reservada para a montagem é anterior à entrega do produto do cliente."
+                          : `Montagem agendada para ${validation.diff} dias após a entrega. O prazo estipulado limite é de 3 dias.`
+                        }
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Início & Duração Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Início da Montagem</label>
+                  <div className="relative group">
+                    <input
+                      type="time"
+                      required
+                      disabled={isReadOnly}
+                      className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                      value={formData.horario}
+                      onChange={e => setFormData({ ...formData, horario: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Início</label>
-                  <input
-                    type="time"
-                    required
-                    disabled={isReadOnly}
-                    className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-[10px] outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                    value={formData.horario}
-                    onChange={e => setFormData({ ...formData, horario: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duração</label>
-                  <input
-                    type="time"
-                    required
-                    disabled={isReadOnly}
-                    className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-[10px] outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                    value={formData.duracao}
-                    onChange={e => setFormData({ ...formData, duracao: e.target.value })}
-                  />
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Duração Estimada</label>
+                  <div className="relative group">
+                    <input
+                      type="time"
+                      required
+                      disabled={isReadOnly}
+                      className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-sm outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                      value={formData.duracao}
+                      onChange={e => setFormData({ ...formData, duracao: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 

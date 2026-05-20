@@ -31,6 +31,28 @@ import { cn } from '@/src/lib/utils';
 import { startOfWeek, endOfWeek, isWithinInterval, addDays, format, isToday, isTomorrow } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
 
+const formatShortDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}`;
+  }
+  return dateStr;
+};
+
+const isDeliveryWarning = (deliveryDateStr: string, assemblyDateStr: string) => {
+  if (!deliveryDateStr || !assemblyDateStr) return false;
+  try {
+    const d1 = new Date(deliveryDateStr + 'T00:00:00');
+    const d2 = new Date(assemblyDateStr + 'T00:00:00');
+    const timeDiff = d2.getTime() - d1.getTime();
+    const diffDays = Math.round(timeDiff / (1000 * 3600 * 24));
+    return diffDays < 0 || diffDays > 3;
+  } catch {
+    return false;
+  }
+};
+
 export const AgendaPage: React.FC = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -327,102 +349,104 @@ export const AgendaPage: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="relative">
-                          <button 
-                            onClick={() => setActionMenuId(actionMenuId === assembly.id ? null : assembly.id)}
-                            className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-                          
-                          <AnimatePresence>
-                            {actionMenuId === assembly.id && (
-                              <>
-                                <div 
-                                  className="fixed inset-0 z-[140] bg-slate-900/5 backdrop-blur-[2px]" 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActionMenuId(null);
-                                  }} 
-                                />
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                  transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                                  className="absolute right-0 top-12 w-52 bg-white rounded-[32px] shadow-[0_25px_60px_rgba(0,0,0,0.25)] border border-slate-100 p-2 z-[150] overflow-hidden"
-                                >
-                                  <div className="space-y-1">
-                                    <button 
-                                      onClick={(e) => { e.stopPropagation(); handleEdit(assembly); }} 
-                                      className="w-full flex items-center justify-between h-12 px-4 hover:bg-slate-50 rounded-2xl transition-all text-slate-700 active:scale-[0.98]"
-                                    >
-                                      <span className="font-bold text-[11px] uppercase tracking-widest">Editar</span>
-                                      <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                                        <Edit2 size={14} />
-                                      </div>
-                                    </button>
-                                    
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedAssembly(assembly);
-                                        setIsRescheduleOpen(true);
-                                        setActionMenuId(null);
-                                      }} 
-                                      className="w-full flex items-center justify-between h-12 px-4 hover:bg-slate-50 rounded-2xl transition-all text-slate-700 active:scale-[0.98]"
-                                    >
-                                      <span className="font-bold text-[11px] uppercase tracking-widest">Reagendar</span>
-                                      <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
-                                        <Calendar size={14} />
-                                      </div>
-                                    </button>
-                                  </div>
-
-                                  <div className="h-px bg-slate-100/50 my-2 mx-2" />
-                                  
-                                  <div className="px-3 py-2">
-                                    <p className="text-[9px] uppercase font-black text-slate-400 mb-3 ml-1 tracking-widest">Alterar Status</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      {(['agendada', 'concluída', 'pendência', 'reagendada'] as AssemblyStatus[]).map(s => (
-                                        <button 
-                                          key={s}
-                                          onClick={(e) => { e.stopPropagation(); updateStatus(assembly.id, s); }}
-                                          className={cn(
-                                            "h-9 flex items-center justify-center rounded-xl text-[8px] font-black uppercase tracking-tight transition-all border",
-                                            assembly.status === s 
-                                              ? "bg-slate-900 border-slate-900 text-white shadow-lg" 
-                                              : "bg-white border-slate-100 text-slate-500 hover:border-slate-200"
-                                          )}
-                                        >
-                                          {s}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  {user?.tipo === 'admin' && (
-                                    <>
-                                      <div className="h-px bg-slate-100/50 my-2 mx-2" />
+                        {user?.tipo !== 'vendas' && (
+                          <div className="relative">
+                            <button 
+                              onClick={() => setActionMenuId(actionMenuId === assembly.id ? null : assembly.id)}
+                              className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"
+                            >
+                              <MoreVertical size={18} />
+                            </button>
+                            
+                            <AnimatePresence>
+                              {actionMenuId === assembly.id && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-[140] bg-slate-900/5 backdrop-blur-[2px]" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActionMenuId(null);
+                                    }} 
+                                  />
+                                  <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                                    className="absolute right-0 top-12 w-52 bg-white rounded-[32px] shadow-[0_25px_60px_rgba(0,0,0,0.25)] border border-slate-100 p-2 z-[150] overflow-hidden"
+                                  >
+                                    <div className="space-y-1">
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); handleEdit(assembly); }} 
+                                        className="w-full flex items-center justify-between h-12 px-4 hover:bg-slate-50 rounded-2xl transition-all text-slate-700 active:scale-[0.98]"
+                                      >
+                                        <span className="font-bold text-[11px] uppercase tracking-widest">Editar</span>
+                                        <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                                          <Edit2 size={14} />
+                                        </div>
+                                      </button>
+                                      
                                       <button 
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleDelete(assembly.id);
+                                          setSelectedAssembly(assembly);
+                                          setIsRescheduleOpen(true);
+                                          setActionMenuId(null);
                                         }} 
-                                        className="w-full flex items-center justify-between h-14 px-4 hover:bg-red-50 text-red-500 rounded-[22px] transition-all active:scale-[0.98] group"
+                                        className="w-full flex items-center justify-between h-12 px-4 hover:bg-slate-50 rounded-2xl transition-all text-slate-700 active:scale-[0.98]"
                                       >
-                                        <span className="font-bold text-[11px] uppercase tracking-widest">Excluir</span>
-                                        <div className="w-9 h-9 rounded-xl bg-red-100/50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
-                                          <Trash2 size={16} />
+                                        <span className="font-bold text-[11px] uppercase tracking-widest">Reagendar</span>
+                                        <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
+                                          <Calendar size={14} />
                                         </div>
                                       </button>
-                                    </>
-                                  )}
-                                </motion.div>
-                              </>
-                            )}
-                          </AnimatePresence>
-                        </div>
+                                    </div>
+
+                                    <div className="h-px bg-slate-100/50 my-2 mx-2" />
+                                    
+                                    <div className="px-3 py-2">
+                                      <p className="text-[9px] uppercase font-black text-slate-400 mb-3 ml-1 tracking-widest">Alterar Status</p>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {(['agendada', 'concluída', 'pendência', 'reagendada'] as AssemblyStatus[]).map(s => (
+                                          <button 
+                                            key={s}
+                                            onClick={(e) => { e.stopPropagation(); updateStatus(assembly.id, s); }}
+                                            className={cn(
+                                              "h-9 flex items-center justify-center rounded-xl text-[8px] font-black uppercase tracking-tight transition-all border",
+                                              assembly.status === s 
+                                                ? "bg-slate-900 border-slate-900 text-white shadow-lg" 
+                                                : "bg-white border-slate-100 text-slate-500 hover:border-slate-200"
+                                            )}
+                                          >
+                                            {s}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {user?.tipo === 'admin' && (
+                                      <>
+                                        <div className="h-px bg-slate-100/50 my-2 mx-2" />
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(assembly.id);
+                                          }} 
+                                          className="w-full flex items-center justify-between h-14 px-4 hover:bg-red-50 text-red-500 rounded-[22px] transition-all active:scale-[0.98] group"
+                                        >
+                                          <span className="font-bold text-[11px] uppercase tracking-widest">Excluir</span>
+                                          <div className="w-9 h-9 rounded-xl bg-red-100/50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                                            <Trash2 size={16} />
+                                          </div>
+                                        </button>
+                                      </>
+                                    )}
+                                  </motion.div>
+                                </>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2.5 bg-slate-50/50 p-2.5 rounded-2xl border border-slate-100/30">
@@ -439,6 +463,30 @@ export const AgendaPage: React.FC = () => {
                           <span className="text-[11px] font-black text-slate-900">{assembly.horario}</span>
                         </div>
                       </div>
+
+                      {assembly.dataEntrega && (
+                        <div className={cn(
+                          "flex items-center justify-between p-2.5 px-3 rounded-2xl text-[10px] font-bold border transition-colors",
+                          isDeliveryWarning(assembly.dataEntrega, assembly.data) 
+                            ? "bg-red-50/70 border-red-100/50 text-red-600" 
+                            : "bg-emerald-50/50 border-emerald-100/30 text-emerald-700"
+                        )}>
+                          <div className="flex items-center gap-1.5">
+                            <CalendarDays size={13} className={isDeliveryWarning(assembly.dataEntrega, assembly.data) ? "text-red-500" : "text-emerald-500"} />
+                            <span>Entrega: <strong className="font-extrabold">{formatShortDate(assembly.dataEntrega)}</strong></span>
+                          </div>
+                          
+                          {isDeliveryWarning(assembly.dataEntrega, assembly.data) ? (
+                            <span className="text-[8px] font-black uppercase tracking-wider bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-sm">
+                              <AlertTriangle size={8} /> Fora do Prazo (3d)
+                            </span>
+                          ) : (
+                            <span className="text-[8px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-md shadow-sm">
+                              No Prazo
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-1.5 text-slate-400 min-w-0">

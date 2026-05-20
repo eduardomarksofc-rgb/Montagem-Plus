@@ -25,6 +25,28 @@ import { StatusBadge } from '@/src/components/StatusBadge';
 import { cn } from '@/src/lib/utils';
 import { AssemblyForm } from '@/src/components/AssemblyForm';
 
+const formatShortDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}`;
+  }
+  return dateStr;
+};
+
+const isDeliveryWarning = (deliveryDateStr: string, assemblyDateStr: string) => {
+  if (!deliveryDateStr || !assemblyDateStr) return false;
+  try {
+    const d1 = new Date(deliveryDateStr + 'T00:00:00');
+    const d2 = new Date(assemblyDateStr + 'T00:00:00');
+    const timeDiff = d2.getTime() - d1.getTime();
+    const diffDays = Math.round(timeDiff / (1000 * 3600 * 24));
+    return diffDays < 0 || diffDays > 3;
+  } catch {
+    return false;
+  }
+};
+
 export const HistoricoPage: React.FC = () => {
   const { user } = useAuth();
   const [assemblies, setAssemblies] = useState<any[]>([]);
@@ -181,9 +203,22 @@ export const HistoricoPage: React.FC = () => {
                 <div>
                   <h4 className="text-sm font-black text-slate-900 leading-none mb-1">{a.cliente || 'Sem Nome'}</h4>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[150px]">{a.produto || 'Sem Produto'}</p>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[10px] text-slate-400 font-medium">{a.data}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-200" />
+                    {a.dataEntrega && (
+                      <>
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded-full text-[8px] font-bold border flex items-center gap-1",
+                          isDeliveryWarning(a.dataEntrega, a.data) 
+                            ? "bg-red-50 text-red-600 border-red-100" 
+                            : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        )}>
+                          Entrega: {formatShortDate(a.dataEntrega)}
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                      </>
+                    )}
                     <span className={cn(
                       "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border",
                       a.prioridade === 'urgente' ? 'bg-red-50 text-red-600 border-red-100' : 
@@ -265,7 +300,10 @@ export const HistoricoPage: React.FC = () => {
                 )}
 
                 {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn(
+                  "grid gap-4",
+                  selectedAssembly.dataEntrega ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"
+                )}>
                   <div className="bg-slate-50 p-4 rounded-[28px] border border-slate-100">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Responsável</p>
                     <div className="flex items-center gap-2">
@@ -276,12 +314,31 @@ export const HistoricoPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="bg-slate-50 p-4 rounded-[28px] border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Data e Hora</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Data da Montagem</p>
                     <div className="flex items-center gap-2 text-slate-700">
                        <CalendarIcon size={16} className="text-blue-500" />
                        <span className="text-xs font-bold">{selectedAssembly.data} • {selectedAssembly.horario}</span>
                     </div>
                   </div>
+                  {selectedAssembly.dataEntrega && (
+                    <div className={cn(
+                      "p-4 rounded-[28px] border transition-all",
+                      isDeliveryWarning(selectedAssembly.dataEntrega, selectedAssembly.data)
+                        ? "bg-red-50/50 border-red-100/50 text-red-700"
+                        : "bg-emerald-50/50 border-emerald-100/30 text-emerald-800"
+                    )}>
+                      <p className="text-[10px] font-black opacity-60 uppercase tracking-widest mb-2">Previsão de Entrega</p>
+                      <div className="flex items-center gap-2 font-bold text-xs">
+                        <CalendarIcon size={16} className={isDeliveryWarning(selectedAssembly.dataEntrega, selectedAssembly.data) ? "text-red-500" : "text-emerald-500"} />
+                        <span>
+                          {selectedAssembly.dataEntrega.split('-').reverse().join('/')}
+                          <span className="text-[8px] font-black uppercase tracking-widest ml-1.5 opacity-80 border px-1 rounded-md bg-white">
+                            {isDeliveryWarning(selectedAssembly.dataEntrega, selectedAssembly.data) ? "⚠️ Alerta" : "OK"}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Observations */}

@@ -17,8 +17,22 @@ import {
 import { subscribeToCollection, createDocument, updateDocument, deleteDocument } from '@/src/firebase/firestore';
 import { serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/src/firebase/config';
+import { useAuth } from '@/src/context/AuthContext';
 
 export const ManageMontadoresPage: React.FC = () => {
+  const { user } = useAuth();
+
+  if (user?.tipo !== 'admin') {
+    return (
+      <div className="p-8 text-center bg-white rounded-[40px] border border-slate-100 space-y-4 max-w-sm mx-auto mt-20 shadow-xl">
+        <h3 className="text-lg font-black text-rose-650">Acesso Restrito</h3>
+        <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+          Você não possui privilégios de Administrador para acessar o painel de gerenciamento de equipe.
+        </p>
+      </div>
+    );
+  }
+
   const [montadores, setMontadores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,12 +45,13 @@ export const ManageMontadoresPage: React.FC = () => {
     usuario: '',
     senha: '',
     telefone: '',
+    tipo: 'montador',
   });
 
   useEffect(() => {
-    // Subscribe to users of type 'montador'
+    // Subscribe to users of type 'montador' or 'vendas'
     const unsub = subscribeToCollection('usuarios', (data) => {
-      setMontadores(data.filter(u => u.tipo === 'montador').sort((a, b) => a.nome.localeCompare(b.nome)));
+      setMontadores(data.filter(u => u.tipo === 'montador' || u.tipo === 'vendas').sort((a, b) => a.nome.localeCompare(b.nome)));
       setLoading(false);
     });
     return () => unsub?.();
@@ -65,7 +80,6 @@ export const ManageMontadoresPage: React.FC = () => {
 
       const payload = {
         ...formData,
-        tipo: 'montador',
         ativo: editingMontador ? editingMontador.ativo : true,
         atualizadoEm: serverTimestamp(),
       };
@@ -83,14 +97,14 @@ export const ManageMontadoresPage: React.FC = () => {
       resetForm();
     } catch (error) {
       console.error(error);
-      setError('Erro ao salvar montador. Tente novamente.');
+      setError('Erro ao salvar usuário. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({ nome: '', usuario: '', senha: '', telefone: '' });
+    setFormData({ nome: '', usuario: '', senha: '', telefone: '', tipo: 'montador' });
     setEditingMontador(null);
     setError(null);
   };
@@ -102,6 +116,7 @@ export const ManageMontadoresPage: React.FC = () => {
       usuario: m.usuario,
       senha: m.senha,
       telefone: m.telefone || '',
+      tipo: m.tipo || 'montador',
     });
     setIsModalOpen(true);
   };
@@ -143,7 +158,7 @@ export const ManageMontadoresPage: React.FC = () => {
         ) : montadores.length === 0 ? (
           <div className="bg-white p-12 rounded-[32px] text-center border border-dashed border-slate-200">
              <UserCircle className="mx-auto text-slate-200 mb-3" size={48} />
-             <p className="text-slate-400 font-bold">Nenhum montador cadastrado</p>
+             <p className="text-slate-400 font-bold">Nenhum acesso cadastrado</p>
           </div>
         ) : (
           montadores.map((m) => (
@@ -157,9 +172,18 @@ export const ManageMontadoresPage: React.FC = () => {
                   {m.nome.charAt(0)}
                 </div>
                 <div>
-                  <h4 className={`text-sm font-bold ${m.ativo ? 'text-slate-900' : 'text-slate-400'}`}>{m.nome}</h4>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${m.ativo ? 'text-emerald-500 text-xs' : 'text-slate-300'}`}>
+                    <h4 className={`text-sm font-bold ${m.ativo ? 'text-slate-900' : 'text-slate-400'}`}>{m.nome}</h4>
+                    <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md leading-none ${
+                        m.tipo === 'vendas'
+                          ? 'bg-indigo-50 text-indigo-600 border border-indigo-100/30'
+                          : 'bg-blue-50 text-blue-600 border border-blue-100/30'
+                      }`}>
+                        {m.tipo === 'vendas' ? 'Vendas' : 'Montador'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${m.ativo ? 'text-emerald-500' : 'text-slate-300'}`}>
                       @{m.usuario}
                     </span>
                     <span className="w-1 h-1 rounded-full bg-slate-200" />
@@ -215,11 +239,11 @@ export const ManageMontadoresPage: React.FC = () => {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                    {editingMontador ? 'Editar Dados' : 'Novo Montador'}
+                    {editingMontador ? 'Editar Acesso' : 'Novo Acesso'}
                   </h3>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Acesso Individual</p>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><X size={20}/></button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><X size={20}/></button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -276,6 +300,34 @@ export const ManageMontadoresPage: React.FC = () => {
                       value={formData.telefone}
                       onChange={e => setFormData({ ...formData, telefone: e.target.value })}
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Perfil de Acesso</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tipo: 'montador' })}
+                      className={`h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                        formData.tipo === 'montador'
+                          ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                          : 'bg-slate-50 border-slate-100 text-slate-400'
+                      }`}
+                    >
+                      Montador
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tipo: 'vendas' })}
+                      className={`h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                        formData.tipo === 'vendas'
+                          ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                          : 'bg-slate-50 border-slate-100 text-slate-400'
+                      }`}
+                    >
+                      Vendas
+                    </button>
                   </div>
                 </div>
 

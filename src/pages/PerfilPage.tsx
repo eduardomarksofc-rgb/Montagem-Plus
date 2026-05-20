@@ -55,9 +55,9 @@ export const PerfilPage: React.FC = () => {
         <div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-2">{user?.nome}</h2>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-lg">
-            <Shield size={12} className={user?.tipo === 'admin' ? 'text-blue-500' : 'text-slate-400'} />
+            <Shield size={12} className={user?.tipo === 'admin' ? 'text-blue-500' : user?.tipo === 'vendas' ? 'text-indigo-500' : 'text-slate-400'} />
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
-              {user?.tipo === 'admin' ? 'Administrador Especialista' : 'Montador Oficial'}
+              {user?.tipo === 'admin' ? 'Administrador Especialista' : user?.tipo === 'vendas' ? 'Equipe de Vendas' : 'Montador Oficial'}
             </p>
           </div>
         </div>

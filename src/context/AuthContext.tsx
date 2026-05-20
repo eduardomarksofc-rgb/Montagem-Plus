@@ -5,7 +5,7 @@ interface User {
   id: string;
   nome: string;
   usuario: string;
-  tipo: 'admin' | 'montador';
+  tipo: 'admin' | 'montador' | 'vendas';
   cidade: string;
   ativo: boolean;
   montadorId?: string; // Optional link to the montadores entity
@@ -46,6 +46,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
         setUser(masterUser);
         localStorage.setItem('montagem_plus_user', JSON.stringify(masterUser));
+        return true;
+      }
+
+      if (usuario === 'vendas' && senha === '123456') {
+        const salesUser: User = {
+          id: 'vendedor_teste',
+          nome: 'Vendedor Lucas',
+          usuario: 'vendas',
+          tipo: 'vendas',
+          cidade: 'Geral',
+          ativo: true
+        };
+        setUser(salesUser);
+        localStorage.setItem('montagem_plus_user', JSON.stringify(salesUser));
         return true;
       }
 

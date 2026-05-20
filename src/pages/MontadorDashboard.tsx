@@ -26,6 +26,28 @@ import { NotificationCenter } from '@/src/components/NotificationCenter';
 import { RescheduleModal } from '@/src/components/RescheduleModal';
 import { GlobalSearch } from '@/src/components/GlobalSearch';
 
+const formatShortDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}`;
+  }
+  return dateStr;
+};
+
+const isDeliveryWarning = (deliveryDateStr: string, assemblyDateStr: string) => {
+  if (!deliveryDateStr || !assemblyDateStr) return false;
+  try {
+    const d1 = new Date(deliveryDateStr + 'T00:00:00');
+    const d2 = new Date(assemblyDateStr + 'T00:00:00');
+    const timeDiff = d2.getTime() - d1.getTime();
+    const diffDays = Math.round(timeDiff / (1000 * 3600 * 24));
+    return diffDays < 0 || diffDays > 3;
+  } catch {
+    return false;
+  }
+};
+
 export const MontadorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [assemblies, setAssemblies] = useState<any[]>([]);
@@ -329,6 +351,26 @@ export const MontadorDashboard: React.FC = () => {
                       <p className="text-[11px] font-bold text-slate-700 leading-tight truncate">{assembly.produto}</p>
                     </div>
                   </div>
+
+                  {assembly.dataEntrega && (
+                    <div className={cn(
+                      "flex items-center justify-between p-2.5 px-3 rounded-2xl text-[10px] font-bold border transition-colors",
+                      isDeliveryWarning(assembly.dataEntrega, assembly.data) 
+                        ? "bg-red-50/70 border-red-100/50 text-red-600" 
+                        : "bg-emerald-50/50 border-emerald-100/30 text-emerald-700"
+                    )}>
+                      <div className="flex items-center gap-1.5">
+                        <CalendarIcon size={13} className={isDeliveryWarning(assembly.dataEntrega, assembly.data) ? "text-red-500" : "text-emerald-500"} />
+                        <span>Entrega: <strong className="font-extrabold">{formatShortDate(assembly.dataEntrega)}</strong></span>
+                      </div>
+                      <span className={cn(
+                        "text-[7px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md shadow-sm",
+                        isDeliveryWarning(assembly.dataEntrega, assembly.data) ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                      )}>
+                        {isDeliveryWarning(assembly.dataEntrega, assembly.data) ? "Fora do Prazo (3d)" : "No Prazo"}
+                      </span>
+                    </div>
+                  )}
 
                   {assembly.observacao && (
                     <div className="flex items-start gap-2 text-slate-500 italic px-3 py-2 bg-indigo-50/30 rounded-xl">
